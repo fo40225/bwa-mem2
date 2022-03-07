@@ -33,9 +33,9 @@ ifneq ($(portable),)
 endif
 
 EXE=		bwa-mem2
-#CXX=		icpc
-ifeq ($(CXX), icpc)
-	CC= icc
+CXX=		icpx
+ifeq ($(CXX), icpx)
+	CC= icx
 else ifeq ($(CXX), g++)
 	CC=gcc
 endif		
@@ -43,41 +43,41 @@ ARCH_FLAGS=	-msse -msse2 -msse3 -mssse3 -msse4.1
 MEM_FLAGS=	-DSAIS=1
 CPPFLAGS+=	-DENABLE_PREFETCH -DV17=1 -DMATE_SORT=0 $(MEM_FLAGS) 
 INCLUDES=   -Isrc -Iext/safestringlib/include
-LIBS=		-lpthread -lm -lz -L. -lbwa -Lext/safestringlib -lsafestring $(STATIC_GCC)
+LIBS=		-lpthread -lm -lz -L. -Lext/safestringlib -lsafestring $(STATIC_GCC)
 OBJS=		src/fastmap.o src/bwtindex.o src/utils.o src/memcpy_bwamem.o src/kthread.o \
 			src/kstring.o src/ksw.o src/bntseq.o src/bwamem.o src/profiling.o src/bandedSWA.o \
 			src/FMI_search.o src/read_index_ele.o src/bwamem_pair.o src/kswv.o src/bwa.o \
 			src/bwamem_extra.o src/kopen.o
-BWA_LIB=    libbwa.a
+
 SAFE_STR_LIB=    ext/safestringlib/libsafestring.a
 
 ifeq ($(arch),sse41)
-	ifeq ($(CXX), icpc)
-		ARCH_FLAGS=-msse4.1
+	ifeq ($(CXX), icpx)
+		ARCH_FLAGS=-xSSE4.1
 	else
 		ARCH_FLAGS=-msse -msse2 -msse3 -mssse3 -msse4.1
 	endif
 else ifeq ($(arch),sse42)
-	ifeq ($(CXX), icpc)	
-		ARCH_FLAGS=-msse4.2
+	ifeq ($(CXX), icpx)	
+		ARCH_FLAGS=-xSSE4.2
 	else
 		ARCH_FLAGS=-msse -msse2 -msse3 -mssse3 -msse4.1 -msse4.2
 	endif
 else ifeq ($(arch),avx)
-	ifeq ($(CXX), icpc)
-		ARCH_FLAGS=-mavx ##-xAVX
+	ifeq ($(CXX), icpx)
+		ARCH_FLAGS=-xAVX
 	else	
 		ARCH_FLAGS=-mavx
 	endif
 else ifeq ($(arch),avx2)
-	ifeq ($(CXX), icpc)
-		ARCH_FLAGS=-march=core-avx2 #-xCORE-AVX2
+	ifeq ($(CXX), icpx)
+		ARCH_FLAGS=-xCORE-AVX2
 	else	
 		ARCH_FLAGS=-mavx2
 	endif
 else ifeq ($(arch),avx512)
-	ifeq ($(CXX), icpc)
-		ARCH_FLAGS=-xCORE-AVX512
+	ifeq ($(CXX), icpx)
+		ARCH_FLAGS=-xCORE-AVX512 -fno-unroll-loops
 	else	
 		ARCH_FLAGS=-mavx512bw
 	endif
@@ -90,7 +90,7 @@ else
 myall:multi
 endif
 
-CXXFLAGS+=	-g -O3 -fpermissive $(ARCH_FLAGS) #-Wall ##-xSSE2
+CXXFLAGS+=	-O3 -fpermissive -ipo $(ARCH_FLAGS) #-Wall ##-xSSE2
 
 .PHONY:all clean depend multi
 .SUFFIXES:.cpp .o
@@ -114,11 +114,8 @@ multi:
 	$(CXX) -Wall -O3 src/runsimd.cpp -Iext/safestringlib/include -Lext/safestringlib/ -lsafestring $(STATIC_GCC) -o bwa-mem2
 
 
-$(EXE):$(BWA_LIB) $(SAFE_STR_LIB) src/main.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) src/main.o $(BWA_LIB) $(LIBS) -o $@
-
-$(BWA_LIB):$(OBJS)
-	ar rcs $(BWA_LIB) $(OBJS)
+$(EXE):$(OBJS) $(SAFE_STR_LIB) src/main.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) src/main.o $(OBJS) $(LIBS) -o $@
 
 $(SAFE_STR_LIB):
 	cd ext/safestringlib/ && $(MAKE) clean && $(MAKE) CC=$(CC) directories libsafestring.a

@@ -33,13 +33,13 @@ ifneq ($(portable),)
 endif
 
 EXE=		bwa-mem2
-CXX=		icpx
+#CXX=		icpx
 ifeq ($(CXX), icpx)
 	CC= icx
 else ifeq ($(CXX), g++)
 	CC=gcc
 endif		
-ARCH_FLAGS=	-msse -msse2 -msse3 -mssse3 -msse4.1
+ARCH_FLAGS= -march=x86-64
 MEM_FLAGS=	-DSAIS=1
 CPPFLAGS+=	-DENABLE_PREFETCH -DV17=1 -DMATE_SORT=0 $(MEM_FLAGS) 
 INCLUDES=   -Isrc -Iext/safestringlib/include
@@ -51,35 +51,35 @@ OBJS=		src/fastmap.o src/bwtindex.o src/utils.o src/memcpy_bwamem.o src/kthread.
 
 SAFE_STR_LIB=    ext/safestringlib/libsafestring.a
 
-ifeq ($(arch),sse41)
+ifeq ($(arch),sse2)
 	ifeq ($(CXX), icpx)
-		ARCH_FLAGS=-xSSE4.1
+		ARCH_FLAGS=-xSSE2
 	else
-		ARCH_FLAGS=-msse -msse2 -msse3 -mssse3 -msse4.1
+		ARCH_FLAGS=-march=x86-64
 	endif
 else ifeq ($(arch),sse42)
 	ifeq ($(CXX), icpx)	
 		ARCH_FLAGS=-xSSE4.2
 	else
-		ARCH_FLAGS=-msse -msse2 -msse3 -mssse3 -msse4.1 -msse4.2
+		ARCH_FLAGS=-msse4.2 -mcx16 -msahf # nehalem && bdver1
 	endif
 else ifeq ($(arch),avx)
 	ifeq ($(CXX), icpx)
 		ARCH_FLAGS=-xAVX
 	else	
-		ARCH_FLAGS=-mavx
+		ARCH_FLAGS=-mavx -mcx16 -mpclmul -msahf # sandybridge && bdver1
 	endif
 else ifeq ($(arch),avx2)
 	ifeq ($(CXX), icpx)
 		ARCH_FLAGS=-xCORE-AVX2
 	else	
-		ARCH_FLAGS=-mavx2
+		ARCH_FLAGS=-mavx2 -mbmi -mbmi2 -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mrdrnd -msahf -mxsaveopt # haswell && bdver4
 	endif
 else ifeq ($(arch),avx512)
 	ifeq ($(CXX), icpx)
 		ARCH_FLAGS=-xCORE-AVX512 -fno-unroll-loops
 	else	
-		ARCH_FLAGS=-mavx512bw
+		ARCH_FLAGS=-mavx512cd -mavx512dq -mavx512bw -mavx512vl # xCORE-AVX512 x86-64-v4
 	endif
 else ifeq ($(arch),native)
 	ARCH_FLAGS=-march=native
@@ -90,7 +90,11 @@ else
 myall:multi
 endif
 
-CXXFLAGS+=	-O3 -fpermissive -ipo $(ARCH_FLAGS) #-Wall ##-xSSE2
+ifeq ($(CXX), icpx)
+	CXXFLAGS+=	-O3 -fpermissive -ipo $(ARCH_FLAGS)
+else
+	CXXFLAGS+=	-O3 -fpermissive -flto $(ARCH_FLAGS)
+endif
 
 .PHONY:all clean depend multi
 .SUFFIXES:.cpp .o
@@ -102,7 +106,7 @@ all:$(EXE)
 
 multi:
 	rm -f src/*.o $(BWA_LIB); cd ext/safestringlib/ && $(MAKE) clean;
-	$(MAKE) arch=sse41    EXE=bwa-mem2.sse41    CXX=$(CXX) all
+	$(MAKE) arch=sse2    EXE=bwa-mem2.sse2    CXX=$(CXX) all
 	rm -f src/*.o $(BWA_LIB); cd ext/safestringlib/ && $(MAKE) clean;
 	$(MAKE) arch=sse42    EXE=bwa-mem2.sse42    CXX=$(CXX) all
 	rm -f src/*.o $(BWA_LIB); cd ext/safestringlib/ && $(MAKE) clean;
@@ -121,7 +125,7 @@ $(SAFE_STR_LIB):
 	cd ext/safestringlib/ && $(MAKE) clean && $(MAKE) CC=$(CC) directories libsafestring.a
 
 clean:
-	rm -fr src/*.o $(BWA_LIB) $(EXE) bwa-mem2.sse41 bwa-mem2.sse42 bwa-mem2.avx bwa-mem2.avx2 bwa-mem2.avx512bw
+	rm -fr src/*.o $(BWA_LIB) $(EXE) bwa-mem2.sse2 bwa-mem2.sse42 bwa-mem2.avx bwa-mem2.avx2 bwa-mem2.avx512bw
 	cd ext/safestringlib/ && $(MAKE) clean
 
 depend:

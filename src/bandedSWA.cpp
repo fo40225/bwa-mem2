@@ -3368,6 +3368,22 @@ _mm_blendv_epi16(__m128i x, __m128i y, __m128i mask)
     return _mm_or_si128(_mm_andnot_si128(mask, x), _mm_and_si128(mask, y));
 }
 
+#ifndef __SSE4_1__
+static inline __m128i _mm_max_epu16 (__m128i x, __m128i y)
+{
+    return _mm_add_epi16(x, _mm_subs_epu16(x, y));
+}
+static inline __m128i _mm_min_epu16 (__m128i x, __m128i y)
+{
+    return _mm_sub_epi16(x, _mm_subs_epu16(x, y));
+}
+static inline __m128i _mm_blendv_epi8 (__m128i x, __m128i y, __m128i mask)
+{
+    // Replace bit in x with bit in y when matching bit in mask is set:
+    return _mm_or_si128(_mm_andnot_si128(mask, x), _mm_and_si128(mask, y));
+}
+#endif
+
 #define ZSCORE16(i4_128, y4_128)                                            \
     {                                                                   \
         __m128i tmpi = _mm_sub_epi16(i4_128, x128);                     \
@@ -4148,14 +4164,6 @@ void BandedPairWiseSW::smithWaterman128_16(uint16_t seq1SoA[],
 
 /********************************************************************************/
 /* SSE2 - 8 bit version */
-#ifndef __SSE4_1__
-static inline __m128i _mm_blendv_epi8 (__m128i x, __m128i y, __m128i mask)
-{
-    // Replace bit in x with bit in y when matching bit in mask is set:
-    return _mm_or_si128(_mm_andnot_si128(mask, x), _mm_and_si128(mask, y));
-}
-#endif
-
 #define ZSCORE8(i4_128, y4_128)                                         \
     {                                                                   \
         __m128i tmpi = _mm_sub_epi8(i4_128, x128);                      \

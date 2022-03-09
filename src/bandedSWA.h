@@ -38,10 +38,12 @@ Authors: Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@i
 
 #if (__AVX512BW__ || __AVX2__)
 #include <immintrin.h>
-#else
+#elif __SSE4_1__
 #include <smmintrin.h>  // for SSE4.1
 #define __mmask8 uint8_t
 #define __mmask16 uint16_t
+#else
+#include <emmintrin.h>
 #endif
 
 #define MAX_SEQ_LEN_REF 256

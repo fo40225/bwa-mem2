@@ -33,12 +33,21 @@ ifneq ($(portable),)
 endif
 
 EXE=		bwa-mem2
+
+# Intel oneAPI DPC++/C++ Compiler
 #CXX=		icpx
+
+# AMD Optimizing C/C++ Compilers
+#CXX=		clang++
+
 ifeq ($(CXX), icpx)
-	CC= icx
+CC=icx
+else ifeq ($(CXX), clang++)
+CC=clang
 else ifeq ($(CXX), g++)
-	CC=gcc
-endif		
+CC=gcc
+endif
+
 ARCH_FLAGS= -march=x86-64
 MEM_FLAGS=	-DSAIS=1
 CPPFLAGS+=	-DENABLE_PREFETCH -DV17=1 -DMATE_SORT=0 $(MEM_FLAGS) 
@@ -53,12 +62,12 @@ SAFE_STR_LIB=    ext/safestringlib/libsafestring.a
 
 ifeq ($(arch),sse2)
 	ifeq ($(CXX), icpx)
-		ARCH_FLAGS=-xSSE2
+		ARCH_FLAGS=-march=x86-64
 	else
 		ARCH_FLAGS=-march=x86-64
 	endif
 else ifeq ($(arch),sse42)
-	ifeq ($(CXX), icpx)	
+	ifeq ($(CXX), icpx)
 		ARCH_FLAGS=-xSSE4.2
 	else
 		ARCH_FLAGS=-msse4.2 -mcx16 -msahf # nehalem && bdver1
@@ -77,9 +86,9 @@ else ifeq ($(arch),avx2)
 	endif
 else ifeq ($(arch),avx512)
 	ifeq ($(CXX), icpx)
-		ARCH_FLAGS=-xCORE-AVX512 -fno-unroll-loops
+		ARCH_FLAGS=-xCORE-AVX512
 	else	
-		ARCH_FLAGS=-mavx512cd -mavx512dq -mavx512bw -mavx512vl # xCORE-AVX512 x86-64-v4
+		ARCH_FLAGS=-mavx512cd -mavx512dq -mavx512bw -mavx512vl -madx -maes -mbmi -mbmi2 -mclflushopt -mclwb -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mpku -mprfchw -mrdrnd -mrdseed -msahf -mxsavec -mxsaveopt -mxsaves # skylake-avx512 && znver4
 	endif
 else ifeq ($(arch),native)
 	ARCH_FLAGS=-march=native
@@ -90,10 +99,10 @@ else
 myall:multi
 endif
 
-ifeq ($(CXX), icpx)
-	CXXFLAGS+=	-O3 -fpermissive -ipo $(ARCH_FLAGS)
-else
-	CXXFLAGS+=	-O3 -fpermissive -flto $(ARCH_FLAGS)
+CXXFLAGS+= -flto -O3 -fpermissive $(ARCH_FLAGS)
+
+ifneq ($(CXX), g++)
+CXXFLAGS+= -fprofile-instr-use=bwa-mem2.profdata
 endif
 
 .PHONY:all clean depend multi

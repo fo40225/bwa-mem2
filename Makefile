@@ -70,30 +70,39 @@ else ifeq ($(arch),sse42)
 	ifeq ($(CXX), icpx)
 		ARCH_FLAGS=-xSSE4.2
 	else
-		ARCH_FLAGS=-msse4.2 -mcx16 -msahf # nehalem && bdver1
+# nehalem && bdver1
+		ARCH_FLAGS=-msse3 -mssse3 -msse4 -msse4.1 -msse4.2 -mcrc32 -mcx16 -mpopcnt -msahf
 	endif
 else ifeq ($(arch),avx)
 	ifeq ($(CXX), icpx)
 		ARCH_FLAGS=-xAVX
 	else	
-		ARCH_FLAGS=-mavx -mcx16 -mpclmul -msahf # sandybridge && bdver1
+# sandybridge && bdver1
+		ARCH_FLAGS=-mavx -mcrc32 -mcx16 -mpclmul -mpopcnt -msahf -mxsave
 	endif
 else ifeq ($(arch),avx2)
 	ifeq ($(CXX), icpx)
 		ARCH_FLAGS=-xCORE-AVX2
 	else	
-		ARCH_FLAGS=-mavx2 -mbmi -mbmi2 -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mrdrnd -msahf -mxsaveopt # haswell && bdver4
+# haswell && bdver4
+		ARCH_FLAGS=-mavx2 -mbmi -mbmi2 -mcrc32 -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mpopcnt -mrdrnd -msahf -mxsave -mxsaveopt
 	endif
 else ifeq ($(arch),avx512)
 	ifeq ($(CXX), icpx)
 		ARCH_FLAGS=-xCORE-AVX512
 	else	
-		ARCH_FLAGS=-mavx512cd -mavx512dq -mavx512bw -mavx512vl -madx -maes -mbmi -mbmi2 -mclflushopt -mclwb -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mpku -mprfchw -mrdrnd -mrdseed -msahf -mxsavec -mxsaveopt -mxsaves # skylake-avx512 && znver4
+# skylake-avx512 && znver4
+		ARCH_FLAGS=-mavx512f -mavx512cd -mavx512dq -mavx512bw -mavx512vl -madx -maes -mavx -mavx2 -mbmi -mbmi2 -mclflushopt -mclwb -mcrc32 -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mpopcnt -mprfchw -mrdrnd -mrdseed -msahf -msse3 -msse4 -msse4.1 -msse4.2 -mssse3 -mxsave -mxsavec -mxsaveopt -mxsaves
 	endif
 else ifeq ($(arch),native)
-	ARCH_FLAGS=-march=native
+	ifeq ($(CXX), icpx)
+		ARCH_FLAGS=-xHOST
+	else
+		ARCH_FLAGS=-march=native
+	endif
+
 else ifneq ($(arch),)
-# To provide a different architecture flag like -march=core-avx2.
+# To provide a different architecture flag like -march=znver4 or -xICELAKE-SERVER.
 	ARCH_FLAGS=$(arch)
 else
 myall:multi

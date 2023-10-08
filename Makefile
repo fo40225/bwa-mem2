@@ -108,7 +108,7 @@ else
 myall:multi
 endif
 
-CXXFLAGS+= -flto -O3 -fpermissive $(ARCH_FLAGS)
+CXXFLAGS+= -flto -O3 -fpermissive -std=c++14 $(ARCH_FLAGS)
 
 ifneq ($(CXX), g++)
 CXXFLAGS+= -fprofile-instr-use=bwa-mem2.profdata

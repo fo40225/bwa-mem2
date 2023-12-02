@@ -53,8 +53,9 @@ extern "C" {
 #define SIMD_AVX512F 0x100
 #define SIMD_AVX512BW 0x200
 
+#ifndef __INTEL_LLVM_COMPILER
 // adapted from https://github.com/01org/linux-sgx/blob/master/common/inc/internal/linux/cpuid_gnu.h
-void cpuidex(int cpuid[4], int func_id, int subfunc_id)
+void __cpuidex(int cpuid[4], int func_id, int subfunc_id)
 {
 #if defined(__x86_64__)
 	__asm__ volatile ("cpuid"
@@ -66,14 +67,15 @@ void cpuidex(int cpuid[4], int func_id, int subfunc_id)
 			: "0" (func_id), "2" (subfunc_id));
 #endif
 }
+#endif
 
 static int x86_simd(void)
 {
 	int flag = 0, cpuid[4], max_id;
-	cpuidex(cpuid, 0, 0);
+	__cpuidex(cpuid, 0, 0);
 	max_id = cpuid[0];
 	if (max_id == 0) return 0;
-	cpuidex(cpuid, 1, 0);
+	__cpuidex(cpuid, 1, 0);
 	if (cpuid[3]>>25&1) flag |= SIMD_SSE;
 	if (cpuid[3]>>26&1) flag |= SIMD_SSE2;
 	if (cpuid[2]>>0 &1) flag |= SIMD_SSE3;
@@ -82,7 +84,7 @@ static int x86_simd(void)
 	if (cpuid[2]>>20&1) flag |= SIMD_SSE4_2;
 	if (cpuid[2]>>28&1) flag |= SIMD_AVX;
 	if (max_id >= 7) {
-		cpuidex(cpuid, 7, 0);
+		__cpuidex(cpuid, 7, 0);
 		if (cpuid[1]>>5 &1) flag |= SIMD_AVX2;
 		if (cpuid[1]>>16&1) flag |= SIMD_AVX512F;
 		if (cpuid[1]>>30&1) flag |= SIMD_AVX512BW;

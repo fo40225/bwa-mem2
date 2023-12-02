@@ -34,6 +34,8 @@ endif
 
 EXE=		bwa-mem2
 
+# need gcc  and up (or remove mprefer-vector-width)
+
 # Intel oneAPI DPC++/C++ Compiler
 #CXX=		icpx
 
@@ -62,37 +64,37 @@ SAFE_STR_LIB=    ext/safestringlib/libsafestring.a
 
 ifeq ($(arch),sse2)
 	ifeq ($(CXX), icpx)
-		ARCH_FLAGS=-march=x86-64
+		ARCH_FLAGS=-mprefer-vector-width=128 -march=x86-64
 	else
-		ARCH_FLAGS=-march=x86-64
+		ARCH_FLAGS=-mprefer-vector-width=128 -march=x86-64
 	endif
 else ifeq ($(arch),sse42)
 	ifeq ($(CXX), icpx)
-		ARCH_FLAGS=-xSSE4.2
+		ARCH_FLAGS=-mprefer-vector-width=128 -xSSE4.2
 	else
-# nehalem && bdver1
-		ARCH_FLAGS=-msse3 -mssse3 -msse4 -msse4.1 -msse4.2 -mcrc32 -mcx16 -mpopcnt -msahf
+# nehalem && bdver1 (x86-64-v2)
+		ARCH_FLAGS=-mprefer-vector-width=128 -msse3 -mssse3 -msse4 -msse4.1 -msse4.2 -mcrc32 -mcx16 -mpopcnt -msahf
 	endif
 else ifeq ($(arch),avx)
 	ifeq ($(CXX), icpx)
-		ARCH_FLAGS=-xAVX
+		ARCH_FLAGS=-mprefer-vector-width=256 -xAVX
 	else	
 # sandybridge && bdver1
-		ARCH_FLAGS=-mavx -mcrc32 -mcx16 -mpclmul -mpopcnt -msahf -mxsave
+		ARCH_FLAGS=-mprefer-vector-width=256 -mavx -mcrc32 -mcx16 -mpclmul -mpopcnt -msahf -mxsave
 	endif
 else ifeq ($(arch),avx2)
 	ifeq ($(CXX), icpx)
-		ARCH_FLAGS=-xCORE-AVX2
+		ARCH_FLAGS=-mprefer-vector-width=256 -xCORE-AVX2
 	else	
-# haswell && bdver4
-		ARCH_FLAGS=-mavx2 -mbmi -mbmi2 -mcrc32 -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mpopcnt -mrdrnd -msahf -mxsave -mxsaveopt
+# haswell && bdver4 (x86-64-v3)
+		ARCH_FLAGS=-mprefer-vector-width=256 -mavx -mavx2 -mbmi -mbmi2 -mcrc32 -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mpopcnt -mrdrnd -msahf -mxsave -mxsaveopt
 	endif
 else ifeq ($(arch),avx512)
 	ifeq ($(CXX), icpx)
-		ARCH_FLAGS=-xCORE-AVX512
+		ARCH_FLAGS=-mprefer-vector-width=512 -xCORE-AVX512
 	else	
-# skylake-avx512 && znver4
-		ARCH_FLAGS=-mavx512f -mavx512cd -mavx512dq -mavx512bw -mavx512vl -madx -maes -mavx -mavx2 -mbmi -mbmi2 -mclflushopt -mclwb -mcrc32 -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mpopcnt -mprfchw -mrdrnd -mrdseed -msahf -msse3 -msse4 -msse4.1 -msse4.2 -mssse3 -mxsave -mxsavec -mxsaveopt -mxsaves
+# skylake-avx512 && znver4 (x86-64-v4)
+		ARCH_FLAGS=-mprefer-vector-width=512 -mavx512f -mavx512cd -mavx512dq -mavx512bw -mavx512vl -madx -maes -mavx -mavx2 -mbmi -mbmi2 -mclflushopt -mclwb -mcrc32 -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mpopcnt -mprfchw -mrdrnd -mrdseed -msahf -mxsave -mxsavec -mxsaveopt -mxsaves
 	endif
 else ifeq ($(arch),native)
 	ifeq ($(CXX), icpx)
@@ -102,17 +104,21 @@ else ifeq ($(arch),native)
 	endif
 
 else ifneq ($(arch),)
-# To provide a different architecture flag like -march=znver4 or -xICELAKE-SERVER.
+# To provide a different architecture flag like -march=znver4 or -xSAPPHIRERAPIDS.
 	ARCH_FLAGS=$(arch)
 else
 myall:multi
 endif
 
-CXXFLAGS+= -flto -O3 -fpermissive -std=c++14 $(ARCH_FLAGS)
-
 ifneq ($(CXX), g++)
-CXXFLAGS+= -fprofile-instr-use=bwa-mem2.profdata
+CXXFLAGS+= -fprofile-sample-use=bwa-mem2-clang-sample.prof -fsample-profile-use-profi -fprofile-instr-use=bwa-mem2-clang-instr.prof 
 endif
+
+CXXFLAGS+= -flto -O3 -std=c++14 -fpermissive $(ARCH_FLAGS)
+
+#ifeq ($(CXX), icpx)
+#CXXFLAGS+= -fprofile-sample-use=bwa-mem2.freq.prof -mllvm -unpredictable-hints-file=bwa-mem2.misp.prof
+#endif
 
 .PHONY:all clean depend multi
 .SUFFIXES:.cpp .o

@@ -34,8 +34,6 @@ endif
 
 EXE=		bwa-mem2
 
-# need gcc  and up (or remove mprefer-vector-width)
-
 # Intel oneAPI DPC++/C++ Compiler
 #CXX=		icpx
 
@@ -63,14 +61,12 @@ OBJS=		src/fastmap.o src/bwtindex.o src/utils.o src/memcpy_bwamem.o src/kthread.
 SAFE_STR_LIB=    ext/safestringlib/libsafestring.a
 
 ifeq ($(arch),sse2)
-	ifeq ($(CXX), icpx)
-		ARCH_FLAGS=-mprefer-vector-width=128 -march=x86-64
-	else
-		ARCH_FLAGS=-mprefer-vector-width=128 -march=x86-64
-	endif
+	ARCH_FLAGS=-mprefer-vector-width=128 -march=x86-64
 else ifeq ($(arch),sse42)
 	ifeq ($(CXX), icpx)
 		ARCH_FLAGS=-mprefer-vector-width=128 -xSSE4.2
+	else ifeq ($(CXX), clang++)
+		ARCH_FLAGS=-mprefer-vector-width=128 -mtune=bdver1 -msse3 -mssse3 -msse4 -msse4.1 -msse4.2 -mcrc32 -mcx16 -mpopcnt -msahf
 	else
 # nehalem && bdver1 (x86-64-v2)
 		ARCH_FLAGS=-mprefer-vector-width=128 -msse3 -mssse3 -msse4 -msse4.1 -msse4.2 -mcrc32 -mcx16 -mpopcnt -msahf
@@ -78,6 +74,8 @@ else ifeq ($(arch),sse42)
 else ifeq ($(arch),avx)
 	ifeq ($(CXX), icpx)
 		ARCH_FLAGS=-mprefer-vector-width=256 -xAVX
+	else ifeq ($(CXX), clang++)
+		ARCH_FLAGS=-mprefer-vector-width=256 -mtune=bdver1 -mavx -mcrc32 -mcx16 -mpclmul -mpopcnt -msahf -mxsave
 	else	
 # sandybridge && bdver1
 		ARCH_FLAGS=-mprefer-vector-width=256 -mavx -mcrc32 -mcx16 -mpclmul -mpopcnt -msahf -mxsave
@@ -85,6 +83,8 @@ else ifeq ($(arch),avx)
 else ifeq ($(arch),avx2)
 	ifeq ($(CXX), icpx)
 		ARCH_FLAGS=-mprefer-vector-width=256 -xCORE-AVX2
+	else ifeq ($(CXX), clang++)
+		ARCH_FLAGS=-mprefer-vector-width=256 -mtune=bdver4 -mavx -mavx2 -mbmi -mbmi2 -mcrc32 -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mpopcnt -mrdrnd -msahf -mxsave -mxsaveopt
 	else	
 # haswell && bdver4 (x86-64-v3)
 		ARCH_FLAGS=-mprefer-vector-width=256 -mavx -mavx2 -mbmi -mbmi2 -mcrc32 -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mpopcnt -mrdrnd -msahf -mxsave -mxsaveopt
@@ -92,6 +92,8 @@ else ifeq ($(arch),avx2)
 else ifeq ($(arch),avx512)
 	ifeq ($(CXX), icpx)
 		ARCH_FLAGS=-mprefer-vector-width=512 -xCORE-AVX512
+	else ifeq ($(CXX), clang++)
+		ARCH_FLAGS=-mprefer-vector-width=512 -mtune=znver4 -mavx512f -mavx512cd -mavx512dq -mavx512bw -mavx512vl -madx -maes -mavx -mavx2 -mbmi -mbmi2 -mclflushopt -mclwb -mcrc32 -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mpopcnt -mprfchw -mrdrnd -mrdseed -msahf -mxsave -mxsavec -mxsaveopt -mxsaves
 	else	
 # skylake-avx512 && znver4 (x86-64-v4)
 		ARCH_FLAGS=-mprefer-vector-width=512 -mavx512f -mavx512cd -mavx512dq -mavx512bw -mavx512vl -madx -maes -mavx -mavx2 -mbmi -mbmi2 -mclflushopt -mclwb -mcrc32 -mcx16 -mf16c -mfma -mfsgsbase -mlzcnt -mmovbe -mpclmul -mpopcnt -mprfchw -mrdrnd -mrdseed -msahf -mxsave -mxsavec -mxsaveopt -mxsaves
